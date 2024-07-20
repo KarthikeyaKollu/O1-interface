@@ -23,7 +23,7 @@ const text = document.querySelector('.text');
 // Variable to keep track of whether the key is being held down
 let isKeyDown = false;
 let audioContext, stream, source, processor, websocket;
-websocket = new WebSocket('ws://0.0.0.0:10001');
+websocket = new WebSocket('wss://0.0.0.0:10001');
 // Function to start the hold action
 async function startHoldAction() {
     if (!isKeyDown) {
