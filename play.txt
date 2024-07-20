@@ -1,0 +1,55 @@
+let audioContext, source, processor, websocket;
+let playbackStream, playbackSource, playbackProcessor;
+
+// Function to start receiving audio
+async function startReceiving() {
+    websocket = new WebSocket('ws://0.0.0.0:10001');
+
+    websocket.onmessage = function(event) {
+        if (typeof event.data === 'string') {
+            // Handle JSON messages if necessary
+            let message = JSON.parse(event.data);
+            if (message.type === 'audio' && message.format === 'bytes.wav') {
+                if (message.start) {
+                    console.log("Audio transmission started");
+                } else if (message.end) {
+                    console.log("Audio transmission ended");
+                }
+            }
+        } else if (event.data instanceof ArrayBuffer) {
+            // Handle binary audio data
+            let audioData = new Int16Array(event.data);
+            let audioBuffer = audioContext.createBuffer(1, audioData.length, 16000);
+
+            // Convert Int16Array to Float32Array
+            let float32Array = new Float32Array(audioData.length);
+            for (let i = 0; i < audioData.length; i++) {
+                float32Array[i] = audioData[i] / 0x7FFF;
+            }
+
+            audioBuffer.copyToChannel(float32Array, 0, 0);
+
+            // Play the received audio
+            playbackSource = audioContext.createBufferSource();
+            playbackSource.buffer = audioBuffer;
+            playbackSource.connect(audioContext.destination);
+            playbackSource.start();
+        }
+    };
+
+    websocket.onopen = async function() {
+        console.log("Connected to server for receiving audio");
+    };
+
+    websocket.onclose = function() {
+        console.log("Disconnected from server");
+    };
+
+    websocket.onerror = function(error) {
+        console.error("WebSocket error:", error);
+    };
+}
+
+// Start the audio context and playback
+audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+startReceiving();
