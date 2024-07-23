@@ -367,13 +367,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load saved tasks from local storage
     loadTasks();
 
-    showOverlayButton.addEventListener('click', () => {
+    const showOverlay = () => {
         overlay.style.display = 'flex';
-    });
-
-    closeOverlayButton.addEventListener('click', () => {
+    };
+    
+    const closeOverlay = () => {
         overlay.style.display = 'none';
-    });
+    };
+    
+    showOverlayButton.addEventListener('click', showOverlay);
+    showOverlayButton.addEventListener('touchstart', showOverlay);
+    
+    closeOverlayButton.addEventListener('click', closeOverlay);
+    closeOverlayButton.addEventListener('touchstart', closeOverlay);
+    
 
     form.addEventListener('submit', (e) => {
         e.preventDefault();
