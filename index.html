@@ -1,194 +1,77 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <link rel="stylesheet" href="style.css">
-<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+<link rel="stylesheet" href="overlay.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IO</title>
+<!-- <link rel="manifest" href="/manifest.json"> -->
+<link rel="apple-touch-icon" sizes="180x180" href="fav/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="fav/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="fav/favicon-16x16.png">
+<link rel="manifest" href="fav/site.webmanifest">
+<link rel="mask-icon" href="fav/safari-pinned-tab.svg" color="#5bbad5">
+<meta name="msapplication-TileColor" content="#da532c">
+<meta name="theme-color" content="#ffffff">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('/service-worker.js').then(function(registration) {
+        console.log('Service Worker registered with scope:', registration.scope);
+      }, function(error) {
+        console.log('Service Worker registration failed:', error);
+      });
+    });
+  }
+</script>
 </head>
 <body>
+  <button id="install-button" style="display: none;">Install App</button>
+  <span id="show-overlay">i</span>
+  
+  <div id="overlay">
+     
+      <div class="todo-container">
+          <div style="position: relative;">
+              <button class="close-btn" id="close-overlay">&times;</button>
+          </div>
+          <form id="todo-form">
+              <input type="text" id="todo-input" placeholder="Add socketUrl...">
+              <button type="submit">Add</button>
+          </form>
+          <ul id="todo-list"></ul>
+      </div>
+  </div>
+
+
+
+
   <div class="wrapper">
-    <div class="recorder">
+    <div id="loader" class="load">
+      <i></i>
+    </div>
+    <div class="recorder hidden">
         <div class="recorder-container">
             <div class="icon-microphone" tabindex="0">•</div>
         </div>
-       </div>
-       
+       </div>  
   </div>
-  <p class="text-5xl  text">Hold to speak</p>
-<script>
-    // Select the recorder container element
-const container = document.querySelector('.recorder');
-const text = document.querySelector('.text');
-
-// Variable to keep track of whether the key is being held down
-let isKeyDown = false;
-let audioContext, stream, source, processor, websocket;
-websocket = new WebSocket('wss://0.0.0.0:10001');
-// Function to start the hold action
-async function startHoldAction() {
-    if (!isKeyDown) {
-        isKeyDown = true;
-        console.log("Action started");
-        text.textContent = "Listening ...."
-        
-        // Start the hold action here, e.g., start recording or another action
-        container.innerHTML = `
-            <div class="recorder-container">
-                <div class="outer"></div>
-                <div class="outer-2"></div>
-                <div class="icon-microphone" tabindex="0">•</div>
-            </div>
-        `;
-        attachEventListeners(); // Reattach event listeners to new elements
-        await startRecording();
-    }
-}
-
-// Function to stop the hold action
-async function stopHoldAction() {
-    if (isKeyDown) {
-        isKeyDown = false;
-        console.log("Action stopped");
-        text.textContent = "Loading ...."
-       
-        // Stop the hold action here, e.g., stop recording or another action
-        container.innerHTML = `
-            <div class="recorder-container">
-                <div class="loading"></div>
-                <div class="icon-microphone" tabindex="0">•</div>
-            </div>
-        `;
-        attachEventListeners(); // Reattach event listeners to new elements
-        await stopRecording();
-        // Example usage with delay
-        await delay(2000); // Wait for 2 seconds
-        text.textContent = "Speaking ...."
-        container.innerHTML = `
-            <div class="music-waves">
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-            </div>
-        `;
-        await delay(5000);
-        container.innerHTML = `
-            <div class="recorder-container">
-                <div class="icon-microphone" tabindex="0">•</div>
-            </div>
-        `;
-        text.textContent = "Hold to speak"
-
-        attachEventListeners(); // Reattach event listeners to new elements
-    }
-}
-
-// Function to attach event listeners to elements
-function attachEventListeners() {
-    const rec = container.querySelector('.icon-microphone');
-    if (rec) {
-        // Add event listener for mousedown event
-        rec.addEventListener("mousedown", startHoldAction);
-        rec.addEventListener("touchstart", startHoldAction);
-
-        // Add event listener for mouseup event
-        rec.addEventListener("mouseup", stopHoldAction);
-        rec.addEventListener("touchend", stopHoldAction);
-    }
-}
-
-// Initial attachment of event listeners
-attachEventListeners();
-
-// Add event listener for keydown event
-document.addEventListener("keydown", (event) => {
-    if (event.code === "Space") {
-        startHoldAction();
-    }
-});
-
-// Add event listener for keyup event
-document.addEventListener("keyup", (event) => {
-    if (event.code === "Space") {
-        stopHoldAction();
-    }
-});
-// Delay function
-function delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-async function startRecording() {
-    navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, channelCount: 1 } })
-        .then(stream => {
-            audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
-            source = audioContext.createMediaStreamSource(stream);
-            processor = audioContext.createScriptProcessor(4096, 1, 1);
-
-            source.connect(processor);
-            processor.connect(audioContext.destination);
-
-           
-
-            websocket.onopen = async function () {
-                await sendJSON({ role: 'user', type: 'audio', format: 'bytes.wav', start: true });
-            };
-
-            processor.onaudioprocess = function (event) {
-                if (isKeyDown) {
-                    let inputData = event.inputBuffer.getChannelData(0);
-                    let int16Array = convertFloat32ToInt16(inputData);
-                    websocket.send(int16Array.buffer);
-                }
-            };
-        })
-        .catch(error => console.error('Error accessing audio devices:', error));
-
-    function convertFloat32ToInt16(buffer) {
-        let l = buffer.length;
-        let buf = new Int16Array(l);
-        while (l--) {
-            buf[l] = Math.max(-1, Math.min(1, buffer[l])) * 0x7FFF;
-        }
-        return buf;
-    }
-
-
-}
-
-async function sendJSON(data) {
-    if (websocket && websocket.readyState === WebSocket.OPEN) {
-        websocket.send(JSON.stringify(data));
-    }
-}
-
-async function stopRecording() {
-    if (websocket && websocket.readyState === WebSocket.OPEN) {
-        await sendJSON({ role: 'user', type: 'audio', format: 'bytes.wav', end: true });
-        // websocket.close();
-    }
-    if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-    }
-    if (processor) {
-        processor.disconnect();
-    }
-    if (source) {
-        source.disconnect();
-    }
-    if (audioContext) {
-        audioContext.close();
-    }
-}
+ 
 
 
 
 
+<p class="text-5xl  text">Connecting .....</p>
 
-</script>
+
+
+<script src="index.js"></script>
+
+
+  <i></i>
+</div>
 
 </body>
 </html>
