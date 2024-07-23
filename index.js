@@ -13,7 +13,7 @@ const audio2 = new Audio('./pop.mp3');
 const THRESHOLD = 5;
 
 async function startHoldAction() {
-    if (!isKeyDown && !isTaskRunning) {
+    if (!isKeyDown && !isTaskRunning && connected_status) {
         isKeyDown = true;
         isTaskRunning = true;
         console.log("Action started");
@@ -44,7 +44,7 @@ async function startHoldAction() {
 
 // Function to stop the hold action
 async function stopHoldAction() {
-    if (isKeyDown && !isTaskRunning) {
+    if (isKeyDown && !isTaskRunning && connected_status) {
         isKeyDown = false;
         isTaskRunning = true;
         console.log("Action stopped");
@@ -87,7 +87,7 @@ async function stopHoldAction() {
 }
 
 function attachEventListeners() {
-    const rec = container.querySelector('.icon-microphone');
+    const rec = container.querySelector('.recorder-container');
      console.log(rec)
     if (rec) {
         const startHold = () => {
@@ -226,11 +226,12 @@ let websocket;
 let audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });;
 let playbackStream, playbackSource, playbackProcessor;
 let audioChunks = [];
-
+let connected_status= false
 function connectWebSocket() {
     websocket = new WebSocket(socketURL);
 
     websocket.onopen = async () => {
+        connected_status= true
         console.log('WebSocket connection established.');
         const loader = document.getElementById("loader");
         const ball = loader.querySelector("i");
@@ -254,6 +255,7 @@ function connectWebSocket() {
     websocket.onclose = (event) => {
         console.log('WebSocket connection closed. Reconnecting...', event);
         setTimeout(connectWebSocket, 2000); // Try to reconnect every 2 seconds
+        connected_status= false
 
     };
 
@@ -445,6 +447,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function saveTasks() {
+        connected_status= false
         const tasks = [];
         const items = todoList.getElementsByTagName('li');
         for (let item of items) {
