@@ -1,12 +1,6 @@
 const container = document.querySelector('.recorder');
 const text = document.querySelector('.text');
 const loader = document.getElementById('loader');
-
-
-
-
-
-
 let isKeyDown = false;
 let isTaskRunning = false;
 let stream, source, processor, analyser, dataArray, bufferLength;
@@ -94,30 +88,37 @@ async function stopHoldAction() {
 
 function attachEventListeners() {
     const rec = container.querySelector('.icon-microphone');
+     console.log(rec)
     if (rec) {
-        rec.addEventListener("mousedown", () => {
+        const startHold = () => {
             holdTimeout = setTimeout(startHoldAction, 300); // Adjust the delay time as needed
-        });
-        rec.addEventListener("touchstart", () => {
-            holdTimeout = setTimeout(startHoldAction, 300); // Adjust the delay time as needed
+        };
+        
+        const endHold = () => {
+            clearTimeout(holdTimeout);
+            if (isKeyDown) {
+                stopHoldAction();
+            }
+        };
+
+        rec.addEventListener("mousedown", startHold);
+        rec.addEventListener("touchstart", (e) => {
+            e.preventDefault();
+            startHold();
         });
 
-        rec.addEventListener("mouseup", () => {
-            clearTimeout(holdTimeout);
-            if (isKeyDown) {
-                stopHoldAction();
-            }
-        });
-        rec.addEventListener("touchend", () => {
-            clearTimeout(holdTimeout);
-            if (isKeyDown) {
-                stopHoldAction();
-            }
+        rec.addEventListener("mouseup", endHold);
+        rec.addEventListener("touchend", (e) => {
+            e.preventDefault();
+            endHold();
         });
     }
 }
 
-attachEventListeners();
+// Attach event listeners when the DOM is fully loaded
+document.addEventListener('DOMContentLoaded', () => {
+    attachEventListeners();
+});
 
 document.addEventListener("keydown", (event) => {
     if (event.code === "Space") {
@@ -131,6 +132,7 @@ document.addEventListener("keyup", (event) => {
         stopHoldAction();
     }
 });
+
 
 async function startRecording() {
     try {
@@ -242,6 +244,7 @@ function connectWebSocket() {
         container.classList.remove('hidden');
         loader.classList.add('hidden');
         text.textContent = "Hold to speak"
+        attachEventListeners();
 
     };
 
